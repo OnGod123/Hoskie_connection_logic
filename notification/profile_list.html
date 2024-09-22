@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>User Profiles</title>
+    <style>
+        .profile-container {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .profile {
+            border: 1px solid #ddd;
+            margin: 10px;
+            padding: 10px;
+            width: calc(33% - 20px);
+        }
+        .profile img {
+            max-width: 100%;
+            height: auto;
+        }
+        .profile-video, .profile-image {
+            width: 100%;
+        }
+        .connect-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .connect-button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Matching Profiles</h1>
+    <div class="profile-container">
+        {% for person, profile in matches_with_profiles %}
+            <div class="profile">
+                <h2>{{ person.name }}</h2>
+                <p><strong>Relationship Status:</strong> {{ profile.relationship_status }}</p>
+                <p><strong>Sexual Orientation:</strong> {{ profile.sexual_orientation }}</p>
+                <p><strong>Race:</strong> {{ profile.race }}</p>
+                <p><strong>Phone Number:</strong> {{ profile.phone_number }}</p>
+                <p><strong>Social Media API:</strong> <a href="{{ profile.social_media_api }}">{{ profile.social_media_api }}</a></p>
+                
+                {% if profile.profile_video %}
+                    <video class="profile-video" controls>
+                        <source src="{{ profile.profile_video.url }}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                {% endif %}
+
+                {% if profile.image %}
+                    <img class="profile-image" src="{{ profile.image.url }}" alt="Profile Image">
+                {% endif %}
+                
+                {% if profile.tweet %}
+                    <img class="profile-image" src="{{ profile.tweet.url }}" alt="Tweet Image">
+                {% endif %}
+
+                {% if profile.video %}
+                    <video class="profile-video" controls>
+                        <source src="{{ profile.video.url }}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                {% endif %}
+
+                <button class="connect-button" data-recipient-username="{{ person.username }}" onclick="sendConnectionRequest('{{ person.username }}')">Connect</button>
+            </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        let socket = new WebSocket('ws://' + window.location.host + '/ws/chat/' + '{{ user.username }}' + '/');
+
+        socket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            alert(data.message);
+        };
+
+        function sendConnectionRequest(recipientUsername) {
+            fetch('/send-connection-request/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ recipient_username: recipientUsername })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    socket.send(JSON.stringify({
+                        'message': 'You have a new connection request from ' + '{{ user.username }}'
+                    }));
+                } else {
+                    alert('Failed to send connection request.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+    </script>
+</body>
+</html>
